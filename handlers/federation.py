@@ -48,39 +48,5 @@ def register(app):
             set_session_data(message.chat.id, message.from_user.id, "name", message.text.strip())
             set_session_step(message.chat.id, message.from_user.id, 2)
             await message.reply(
-                "Great! Now send a description for your federation, or /cancel to abort."
-            )
-            return
+                "Great! Now send a description for your fe
 
-        if step == 2:
-            set_session_data(message.chat.id, message.from_user.id, "desc", message.text.strip())
-            data = session["data"]
-            fed_id = str(message.chat.id)
-            fed_doc = {
-                "_id": fed_id,
-                "owner": message.from_user.id,
-                "admins": [],
-                "groups": [message.chat.id],
-                "bans": [],
-                "name": data["name"],
-                "desc": data["desc"],
-                "action": "kick",
-            }
-            feds.insert_one(fed_doc)
-            await message.reply(
-                f"✅ Federation '{data['name']}' created!\nDescription: {data['desc']}"
-            )
-            end_session(message.chat.id, message.from_user.id)
-            return
-
-    @app.on_message(filters.command("cancel") & filters.group)
-    async def cancel_cmd(client, message):
-        if get_session(message.chat.id, message.from_user.id):
-            end_session(message.chat.id, message.from_user.id)
-            await message.reply("Operation canceled.")
-        else:
-            await message.reply("No operation to cancel.")
-
-    @app.on_message(filters.command("renamefed") & filters.group)
-    @admin_only
-    async def rename_fe_
