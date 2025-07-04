@@ -46,4 +46,14 @@ async def main():
     xp.register(app)
     fun.register(app)
     flyers.register(app)
+    flirtydays.register(app)
+
+    await startup_tasks()
+
+    print("SuccuBot is running...")
+    await idle()  # Keeps bot running until CTRL+C
+    await app.stop()
+
+if __name__ == "__main__":
+    asyncio.run(main())
 
