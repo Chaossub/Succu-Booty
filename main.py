@@ -1,5 +1,6 @@
 import asyncio
 import os
+import logging
 from pyrogram import Client, idle
 from handlers import (
     welcome,
@@ -15,6 +16,8 @@ from handlers import (
 from dotenv import load_dotenv
 
 load_dotenv()
+
+logging.basicConfig(level=logging.INFO)  # or DEBUG for more verbosity
 
 API_ID = int(os.getenv("API_ID"))
 API_HASH = os.getenv("API_HASH")
@@ -35,24 +38,29 @@ async def startup_tasks():
     pass
 
 async def main():
-    await app.start()
+    try:
+        await app.start()
 
-    # Register handlers after starting app
-    welcome.register(app)
-    help_cmd.register(app)
-    moderation.register(app)
-    federation.register(app)
-    summon.register(app)
-    xp.register(app)
-    fun.register(app)
-    flyers.register(app)
-    flirtydays.register(app)
+        welcome.register(app)
+        help_cmd.register(app)
+        moderation.register(app)
+        federation.register(app)
+        summon.register(app)
+        xp.register(app)
+        fun.register(app)
+        flyers.register(app)
+        flirtydays.register(app)
 
-    await startup_tasks()
+        await startup_tasks()
 
-    print("SuccuBot is running...")
-    await idle()  # Keeps bot running until CTRL+C
-    await app.stop()
+        print("SuccuBot is running...")
+        await idle()  # Keeps bot running until CTRL+C
+        await app.stop()
+
+    except Exception as e:
+        logging.error(f"Exception during startup or runtime: {e}", exc_info=True)
+        # Optionally, you can also do:
+        # print(f"Exception during startup or runtime: {e}")
 
 if __name__ == "__main__":
     asyncio.run(main())
