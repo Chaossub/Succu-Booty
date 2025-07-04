@@ -1,14 +1,102 @@
+import os
 from pyrogram import filters
-from handlers.utils import admin_only
+from handlers.session import start_session, get_session, set_session_step, set_session_data, end_session
+from handlers.utils import admin_only, OWNER_ID
+from pymongo import MongoClient
+
+MONGO_URI = os.getenv("MONGO_URI")
+mongo_client = MongoClient(MONGO_URI)
+db = mongo_client["SuccubusSanctuary"]
+feds = db["federations"]
+
+def get_fed_by_group(chat_id):
+    return feds.find_one({"groups": chat_id}) or feds.find_one({"_id": str(chat_id)})
+
+def is_fed_admin(user_id, fed):
+    return user_id == fed["owner"] or user_id in fed.get("admins", [])
 
 def register(app):
+    # Multi-step /createfed with cancel
     @app.on_message(filters.command("createfed") & filters.group)
     @admin_only
-    async def create_fed(client, message):
-        await message.reply("✅ Federation created! (Federation logic to be expanded)")
+    async def createfed_start(client, message):
+        if get_fed_by_group(message.chat.id):
+            await message.reply("❌ This group is already part of a federation.")
+            return
+        start_session(message.chat.id, message.from_user.id, "createfed")
+        await message.reply("Let's create a new federation!\nWhat should the federation's name be?\n\n(Send the name, or /cancel to abort.)")
 
-    @app.on_message(filters.command("fedban") & filters.group)
+    @app.on_message(filters.text & filters.group)
+    async def createfed_steps(client, message):
+        session = get_session(message.chat.id, message.from_user.id)
+        if not session or session["flow"] != "createfed":
+            return
+        step = session["step"]
+
+        if step == 1:
+            set_session_data(message.chat.id, message.from_user.id, "name", message.text.strip())
+            set_session_step(message.chat.id, message.from_user.id, 2)
+            await message.reply("Great! Now send a description for your federation, or /cancel to abort.")
+            return
+
+        if step == 2:
+            set_session_data(message.chat.id, message.from_user.id, "desc", message.text.strip())
+            data = session["data"]
+            fed_id = str(message.chat.id)
+            fed_doc = {
+                "_id": fed_id,
+                "owner": message.from_user.id,
+                "admins": [],
+                "groups": [message.chat.id],
+                "bans": [],
+                "name": data["name"],
+                "desc": data["desc"],
+                "action": "kick"
+            }
+            feds.insert_one(fed_doc)
+            await message.reply(f"✅ Federation '{data['name']}' created!\nDescription: {data['desc']}")
+            end_session(message.chat.id, message.from_user.id)
+            return
+
+    @app.on_message(filters.command("cancel") & filters.group)
+    async def cancel_cmd(client, message):
+        if get_session(message.chat.id, message.from_user.id):
+            end_session(message.chat.id, message.from_user.id)
+            await message.reply("Operation canceled.")
+        else:
+            await message.reply("No operation to cancel.")
+
+    # Single-step commands below
+
+    @app.on_message(filters.command("renamefed") & filters.group)
     @admin_only
-    async def fed_ban(client, message):
-        await message.reply("✅ Federation ban issued! (Federation logic to be expanded)")
+    async def rename_fed(client, message):
+        fed = get_fed_by_group(message.chat.id)
+        if not fed or not is_fed_admin(message.from_user.id, fed):
+            await message.reply("You are not an admin of the federation.")
+            return
+        args = message.text.split(maxsplit=1)
+        if len(args) < 2:
+            await message.reply("Usage: /renamefed <new_name>")
+            return
+        feds.update_one({"_id": fed["_id"]}, {"$set": {"name": args[1]}})
+        await message.reply("✅ Federation renamed!")
 
+    @app.on_message(filters.command("deletefed") & filters.group)
+    @admin_only
+    async def delete_fed(client, message):
+        fed = get_fed_by_group(message.chat.id)
+        if not fed or not is_fed_admin(message.from_user.id, fed):
+            await message.reply("You are not an admin of the federation.")
+            return
+        feds.delete_one({"_id": fed["_id"]})
+        await message.reply("❌ Federation deleted and unlinked from all groups.")
+
+    @app.on_message(filters.command("addfedadmin") & filters.group)
+    @admin_only
+    async def add_fed_admin(client, message):
+        fed = get_fed_by_group(message.chat.id)
+        if not fed or message.from_user.id != fed["owner"]:
+            await message.reply("Only the federation owner can add admins.")
+            return
+        if not message.reply_to_
