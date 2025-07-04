@@ -46,9 +46,7 @@ def register(app):
     @app.on_message(filters.command("summon") & filters.group)
     async def summon(client, message):
         args = message.text.split()
-        chat_id = str(message.chat.id)
         if len(args) > 1:
-            # Summon by username
             if args[1].startswith("@"):
                 user = await client.get_users(args[1])
                 mention = user.mention
@@ -68,7 +66,6 @@ def register(app):
     @app.on_message(filters.command("flirtysummon") & filters.group)
     async def flirtysummon(client, message):
         args = message.text.split()
-        chat_id = str(message.chat.id)
         if len(args) > 1:
             if args[1].startswith("@"):
                 user = await client.get_users(args[1])
@@ -120,5 +117,4 @@ def register(app):
             if member.user.id not in tracked[chat_id]:
                 tracked[chat_id].append(member.user.id)
         save_tracked(tracked)
-        await messa
-
+        await message.reply("Tracked all current group members!")
