@@ -47,9 +47,8 @@ def register(app):
     async def summon(client, message):
         args = message.text.split()
         chat_id = str(message.chat.id)
-        tracked = load_tracked()
         if len(args) > 1:
-            # Summon by username or reply
+            # Summon by username
             if args[1].startswith("@"):
                 user = await client.get_users(args[1])
                 mention = user.mention
@@ -70,7 +69,6 @@ def register(app):
     async def flirtysummon(client, message):
         args = message.text.split()
         chat_id = str(message.chat.id)
-        tracked = load_tracked()
         if len(args) > 1:
             if args[1].startswith("@"):
                 user = await client.get_users(args[1])
@@ -102,4 +100,25 @@ def register(app):
     @app.on_message(filters.command("flirtysummonall") & filters.group)
     async def flirtysummonall(client, message):
         chat_id = str(message.chat.id)
-        tracked = load_tracked().get(chat_id
+        tracked = load_tracked().get(chat_id, [])
+        if not tracked:
+            await message.reply("No users tracked yet! Use /trackall first.")
+            return
+        text = " ".join([f"<a href='tg://user?id={uid}'>summoned</a>" for uid in tracked])
+        msg = random.choice(FLIRTY_SUMMON_MESSAGES).replace("{mention}", text)
+        await message.reply(msg, parse_mode="html")
+
+    @app.on_message(filters.command("trackall") & filters.group)
+    @admin_only
+    async def trackall(client, message):
+        chat_id = str(message.chat.id)
+        tracked = load_tracked()
+        tracked.setdefault(chat_id, [])
+        async for member in client.get_chat_members(chat_id):
+            if member.user.is_bot:
+                continue
+            if member.user.id not in tracked[chat_id]:
+                tracked[chat_id].append(member.user.id)
+        save_tracked(tracked)
+        await messa
+
