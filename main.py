@@ -32,10 +32,9 @@ app = Client(
 
 async def startup_tasks():
     print("Running startup tasks...")
-    # Example: start background tasks here
-    # asyncio.create_task(flyers.flyer_scheduler(app))
-    # asyncio.create_task(flirtydays.post_daily_flirty_theme(app))
-    pass
+    while True:
+        print("SuccuBot heartbeat - alive and kicking!")
+        await asyncio.sleep(300)  # Every 5 minutes
 
 async def main():
     try:
@@ -51,7 +50,8 @@ async def main():
         flyers.register(app)
         flirtydays.register(app)
 
-        await startup_tasks()
+        # Start heartbeat loop so container knows bot is alive
+        asyncio.create_task(startup_tasks())
 
         print("SuccuBot is running...")
         await idle()  # Keeps bot running until CTRL+C
@@ -59,8 +59,6 @@ async def main():
 
     except Exception as e:
         logging.error(f"Exception during startup or runtime: {e}", exc_info=True)
-        # Optionally, you can also do:
-        # print(f"Exception during startup or runtime: {e}")
 
 if __name__ == "__main__":
     asyncio.run(main())
