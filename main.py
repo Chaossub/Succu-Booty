@@ -1,6 +1,6 @@
 import asyncio
 import os
-from pyrogram import Client
+from pyrogram import Client, idle
 from handlers import (
     welcome,
     help_cmd,
@@ -29,14 +29,15 @@ app = Client(
 
 async def startup_tasks():
     print("Running startup tasks...")
-    # Example: start flyer scheduler or flirtydays scheduler here
+    # Example: start background tasks here
     # asyncio.create_task(flyers.flyer_scheduler(app))
     # asyncio.create_task(flirtydays.post_daily_flirty_theme(app))
     pass
 
 async def main():
     await app.start()
-    # Register all handlers
+
+    # Register handlers after starting app
     welcome.register(app)
     help_cmd.register(app)
     moderation.register(app)
@@ -45,13 +46,4 @@ async def main():
     xp.register(app)
     fun.register(app)
     flyers.register(app)
-    flirtydays.register(app)
 
-    await startup_tasks()
-
-    print("SuccuBot is running...")
-    await app.idle()  # Keep running until Ctrl+C or stop signal
-    await app.stop()
-
-if __name__ == "__main__":
-    asyncio.run(main())
